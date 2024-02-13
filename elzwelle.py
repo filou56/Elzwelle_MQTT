@@ -257,15 +257,19 @@ def on_message(client, userdata, msg):
             
     if msg.topic == 'elzwelle/stopwatch/start/number':       
         try:
-            data = payload.split(' ')
-            message = '{:} | {:>10} | {:>2}'.format(data[0].strip(),
-                                                  data[1].strip(),
-                                                  data[2].strip())
-            cell = wks_start.find(data[1].strip())
+            data   = payload.split(' ')
+            time   = data[0].strip()
+            stamp  = data[1].strip()
+            number = data[2].strip()
+            message = '{:} | {:>10} | {:>2}'.format(time,stamp,number)
+            cell = wks_start.find(stamp)
             if cell != None:
                 print("ROW: ",cell.row)     
-                wks_start.update_cell(cell.row,3,data[2])
-                start_update_number(data[1], data[2])
+                wks_start.update_cell(cell.row,3,number)
+                start_update_number(stamp, number)
+                mqtt_client.publish("elzwelle/stopwatch/start/number/akn", 
+                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            qos=1)
             else:
                 print("Stamp not found: ",payload)
         except Exception as e:
@@ -273,15 +277,19 @@ def on_message(client, userdata, msg):
     
     if msg.topic == 'elzwelle/stopwatch/finish/number':       
         try:
-            data = payload.split(' ')
-            message = '{:} | {:>10} | {:>2}'.format(data[0].strip(),
-                                                  data[1].strip(),
-                                                  data[2].strip())
-            cell = wks_finish.find(data[1].strip())
+            data   = payload.split(' ')
+            time   = data[0].strip()
+            stamp  = data[1].strip()
+            number = data[2].strip()
+            message = '{:} | {:>10} | {:>2}'.format(time,stamp,number)
+            cell = wks_finish.find(stamp)
             if cell != None:
                 print("ROW: ",cell.row)     
-                wks_finish.update_cell(cell.row,3,data[2])    
-                finish_update_number(data[1], data[2])
+                wks_finish.update_cell(cell.row,3,number)    
+                finish_update_number(stamp, number)
+                mqtt_client.publish("elzwelle/stopwatch/finish/number/akn", 
+                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            qos=1)
             else:
                 print("Stamp not found: ",payload)
         except Exception as e:
