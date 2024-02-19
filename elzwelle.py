@@ -272,6 +272,9 @@ def on_message(client, userdata, msg):
                             qos=1)
             else:
                 print("Stamp not found: ",payload)
+                mqtt_client.publish("elzwelle/stopwatch/start/number/error", 
+                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            qos=1)
         except Exception as e:
             print("MQTT Decode exception: ",e,payload)
     
@@ -292,6 +295,9 @@ def on_message(client, userdata, msg):
                             qos=1)
             else:
                 print("Stamp not found: ",payload)
+                mqtt_client.publish("elzwelle/stopwatch/finish/number/error", 
+                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            qos=1)
         except Exception as e:
             print("MQTT Decode exception: ",e,payload)
     
