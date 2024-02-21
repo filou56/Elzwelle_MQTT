@@ -40,7 +40,7 @@ serial_time_stamp_finish = 0
 
 #-------------------------- table utils ----------------------------
 
-def start_update_number(stamp, number):
+def start_update_number(stamp, number, remark):
     global time_stamps_start
     global time_stamps_start_dirty
     
@@ -50,13 +50,14 @@ def start_update_number(stamp, number):
         start_stamp = data[1].strip()
         
         if start_stamp == stamp.strip():
-            time_stamps_start[i] = '{:} | {:>10} | {:>2}'.format(data[0].strip(),
+            time_stamps_start[i] = '{:} | {:>10} | {:>2} {:}'.format(data[0].strip(),
                                                                start_stamp,
-                                                               number.strip())  
+                                                               number.strip(),
+                                                               remark)  
             time_stamps_start_dirty = True
             print("Update: ",time_stamps_start[i])
     
-def finish_update_number(stamp, number):
+def finish_update_number(stamp, number, remark):
     global time_stamps_finish
     global time_stamps_finish_dirty
     
@@ -66,9 +67,10 @@ def finish_update_number(stamp, number):
         finish_stamp = data[1].strip()
         
         if finish_stamp == stamp.strip():
-            time_stamps_finish[i] = '{:} | {:>10} | {:>2}'.format(data[0].strip(),
+            time_stamps_finish[i] = '{:} | {:>10} | {:>2} {:}'.format(data[0].strip(),
                                                                 finish_stamp,
-                                                                number.strip())  
+                                                                number.strip(),
+                                                                remark)  
             time_stamps_finish_dirty = True
             print("Update: ",time_stamps_finish[i])
         
@@ -228,6 +230,11 @@ def on_message(client, userdata, msg):
     
     payload = msg.payload.decode('utf-8')
     
+    if msg.topic == 'elzwelle/stopwatch/course/data':
+        print(payload)
+        data = payload.split(',')
+        wks_course.append_row(data); 
+       
     if msg.topic == 'elzwelle/stopwatch/start':
         try:
             data = payload.split(' ')
@@ -261,19 +268,24 @@ def on_message(client, userdata, msg):
             time   = data[0].strip()
             stamp  = data[1].strip()
             number = data[2].strip()
-            message = '{:} | {:>10} | {:>2}'.format(time,stamp,number)
+            if len(data) > 3:
+                remark = data[3].strip()
+            else: 
+                remark = ""
+            message = '{:} | {:>10} | {:>2} | {:}'.format(time,stamp,number,remark.replace('_',' '))
             cell = wks_start.find(stamp)
             if cell != None:
                 print("ROW: ",cell.row)     
                 wks_start.update_cell(cell.row,3,number)
-                start_update_number(stamp, number)
+                wks_start.update_cell(cell.row,4,remark.replace('_',' ')) 
+                start_update_number(stamp, number,remark.replace('_',' '))
                 mqtt_client.publish("elzwelle/stopwatch/start/number/akn", 
-                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            payload='{:} {:} {:} {:}'.format(time,stamp,number,remark), 
                             qos=1)
             else:
                 print("Stamp not found: ",payload)
                 mqtt_client.publish("elzwelle/stopwatch/start/number/error", 
-                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            payload='{:} {:} {:} {:}'.format(time,stamp,number,remark), 
                             qos=1)
         except Exception as e:
             print("MQTT Decode exception: ",e,payload)
@@ -284,19 +296,25 @@ def on_message(client, userdata, msg):
             time   = data[0].strip()
             stamp  = data[1].strip()
             number = data[2].strip()
-            message = '{:} | {:>10} | {:>2}'.format(time,stamp,number)
+            if len(data) > 3:
+                remark = data[3].strip()
+            else: 
+                remark = ""
+                
+            message = '{:} | {:>10} | {:>2} | {:}'.format(time,stamp,number,remark.replace('_',' '))
             cell = wks_finish.find(stamp)
             if cell != None:
                 print("ROW: ",cell.row)     
                 wks_finish.update_cell(cell.row,3,number)    
-                finish_update_number(stamp, number)
+                wks_finish.update_cell(cell.row,4,remark.replace('_',' ')) 
+                finish_update_number(stamp, number,remark.replace('_',' '))
                 mqtt_client.publish("elzwelle/stopwatch/finish/number/akn", 
-                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            payload='{:} {:} {:} {:}'.format(time,stamp,number,remark), 
                             qos=1)
             else:
                 print("Stamp not found: ",payload)
                 mqtt_client.publish("elzwelle/stopwatch/finish/number/error", 
-                            payload='{:} {:} {:}'.format(time,stamp,number), 
+                            payload='{:} {:} {:} {:}'.format(time,stamp,number,remark), 
                             qos=1)
         except Exception as e:
             print("MQTT Decode exception: ",e,payload)
@@ -368,6 +386,8 @@ if __name__ == '__main__':
     #print("Ranges: ",gc.open("timestamp").list_protected_ranges(0))
     # Open a sheet from a spreadsheet in one go
     wks_finish = google_client.open(config.get('google','spreadsheet_name')).get_worksheet(1)
+    # Open a sheet from a spreadsheet in one go
+    wks_course = google_client.open(config.get('google','spreadsheet_name')).get_worksheet(2)
 
     # using MQTT version 5 here, for 3.1.1: MQTTv311, 3.1: MQTTv31
     # userdata is user defined data of any type, updated by user_data_set()
